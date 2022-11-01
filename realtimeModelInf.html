@@ -1,0 +1,43 @@
+<button id='start' onclick="realtime()">start</button>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.8.5/dist/tf.min.js"></script>
+<script type="text/javascript" src="https://unpkg.com/meyda@<VERSION>/dist/web/meyda.min.js"></script>
+<script>
+    
+    function realtime() {
+        navigator.getUserMedia = navigator.getUserMedia;
+
+        if (navigator.getUserMedia) {
+            captureMicrophone();
+        }
+        function captureMicrophone() {
+            const audioContext = new AudioContext();
+            const speaker = audioContext.destination;
+            const processor = audioContext.createScriptProcessor(4096, 1, 1); // check
+            const processAudio = ev => {
+                const CHANNEL = 0;
+                const inputBuffer = ev.inputBuffer;
+                console.log(inputBuffer);
+                const outputBuffer = ev.outputBuffer;
+                console.log(outputBuffer);
+                const inputData = inputBuffer.getChannelData(CHANNEL);
+                console.log(inputData);
+                const outputData = outputBuffer.getChannelData(CHANNEL);
+                //console.log(outputData);
+                for (let i = 0; i < inputBuffer.length; ++i) {
+                    outputData[i] = inputData[i]; // mandatory, else cant hear
+                }
+                data = tf.tensor(inputData);
+                data.print();
+            };
+            const microphoneStream = stream => {
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(processor);
+                processor.connect(speaker); // also check alternate for createScriptProcessor since its deprecated
+            };
+            const userMediaError = err => console.error(err);
+            processor.addEventListener('audioprocess', processAudio);
+            navigator.getUserMedia({ audio: true }, microphoneStream, userMediaError);
+        }
+    }
+
+</script>
