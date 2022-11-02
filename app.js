@@ -295,3 +295,42 @@ function playSound(arrybuffer) {
       audioElem.srcObject = streamNode.stream;                          // play the source now
       source.start();*/
 }
+
+
+function playDecodedSound(value, context) {
+    console.log("%c Printing value", "color: #fbc531")
+    console.log("value " + value)
+
+    // the value is a tensor, so we need to convert it to an array to be able to play it
+    let value_arr = value.dataSync()
+
+    // create a new buffer to store the denoised audio
+    let denoisedBuffer = context.createBuffer(
+        1,
+        value_arr.length,
+        sample_rate
+    )
+
+    // copy the denoised audio to the new buffer
+    denoisedBuffer.copyToChannel(value_arr, 0)
+
+    // create a new audio source to play the denoised audio
+    let denoisedSource = context.createBufferSource()
+    denoisedSource.buffer = denoisedBuffer
+    denoisedSource.connect(context.destination)
+    denoisedSource.start()
+
+    // download the denoised audio as mp3
+    let blob = new Blob([value_arr], { type: "audio/mp3" })
+    let url = URL.createObjectURL(blob)
+    let a = document.createElement("a")
+    a.style.display = "none"
+    a.href = url
+    a.download = "denoised.mp3"
+    a.click()
+    window.URL.revokeObjectURL(url)
+
+    // print duration of the converted mp3 audio
+    console.log("%c Printing duration", "color: #4cd137")
+    console.log("duration " + denoisedBuffer.duration)
+}
