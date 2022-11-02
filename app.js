@@ -327,6 +327,7 @@ function playDecodedSound(value, context) {
 
     // download the denoised audio as mp3
     let blob = new Blob([value_arr], { type: "audio/mp3" })
+    // ISSUE: THE CONVERTED AUDIO CANNOT BE PLAYED ON VLC
     let url = URL.createObjectURL(blob)
     let a = document.createElement("a")
     a.style.display = "none"
