@@ -241,23 +241,25 @@ async function prediction(
 	return denoise_long
 }
 
-function loadDogSound(url) {
+async function loadDogSound(url) {
 	let request = new XMLHttpRequest()
 	request.open("GET", url, true)
 	request.responseType = "arraybuffer"
 
 	// Decode asynchronously
-	request.onload = function () {
+	request.onload = async function () {
 		let context = new AudioContext({ sampleRate: sample_rate })
 		let audioData = request.response
-		console.log(request.response)
-		context.decodeAudioData(request.response, function (buffer) {
+        console.log(request.response)
+		console.log("%c printing response", "color: red" )
+		context.decodeAudioData(audioData, async (buffer) => {
 			console.log(buffer)
-			data = tf.tensor(buffer.getChannelData(0))
+			data = await tf.tensor(buffer.getChannelData(0))
 			data.print()
 
 			dogBarkingBuffer = buffer
-			prediction(
+
+			let value = await prediction(
 				data,
 				dim_sqr_spec,
 				frame_length,
@@ -265,6 +267,9 @@ function loadDogSound(url) {
 				hop_length_frame,
 				hop_length_fft
 			)
+
+            playDecodedSound(value, context)
+            
 		})
 	}
 	request.send()
