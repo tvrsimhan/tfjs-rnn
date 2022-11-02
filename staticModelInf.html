@@ -31,6 +31,36 @@
       return audio_frame_stack;
     }
 
+    function inverse_stft(mag, phase, frame_length, hop_length_fft, n_fft) {
+
+      console.log('mag ' + mag);
+      console.log('phase ' + phase);
+      phase.print();
+
+      var stft_a = tf.mul(mag, phase);
+      // pad_amount = (frame_length - hop_length_fft);
+      // data = tf.mirrorPad(data, [[Math.floor(pad_amount / 2) + 1], [0]], 'reflect');
+      console.log(data.shape);
+      console.log(stft_a.shape);
+      // console.log('stft_a ' + stft_a);
+      stft_a.print();
+      // stft_a.reshape([stft_a.shape[1], stft_a.shape[2], stft_a.shape[0]]);
+      real_frames = stft_a.irfft();
+      console.log('real_frames ' + real_frames.shape);
+      real_frames.print();
+      real_frames = tf.squeeze(real_frames);
+      console.log('real_frames ' + real_frames.shape);
+      real_frames = real_frames.reshape([real_frames.shape[0] * real_frames.shape[1]]);
+      console.log('real_frames ' + real_frames.shape);
+      // console.log(frame_length);
+      real_frames = real_frames.slice([0], frame_length);
+      console.log('real_frames ' + real_frames.shape);
+      // real_frames = real_frames.reshape([1, real_frames.shape[0]]);
+      // console.log('real_frames ' + real_frames.shape);
+      return real_frames;
+    }
+
+
     function audio_to_magnitude_db_and_phase(data, n_fft, frame_length, hop_length_fft) {
       // console.log(data.shape);
       // data.print();
@@ -79,19 +109,23 @@
 
         mag.push(m_mag);
         phase.push(m_phase);
-
+        console.log('phase shape' + phase[0].shape);
       }
-      mat_mag = tf.stack(mag);
-      mat_phase = tf.stack(phase);
-      console.log(mat_mag.shape);
-      console.log(mat_phase.shape);
-      return [mat_mag, mat_phase];
+      // mat_mag = tf.stack(mag);
+      // = tf.stack(phase);
+      // console.log(mat_mag.shape);
+      // console.log('phase ' + phase.length);
+      return [mag, phase];
     }
 
     function magnitude_db_and_phase_to_audio(frame_length, hop_length_fft, amp_db, phase, ref_value) {
       amp_db_rev = tf.mul(ref_value.square(), tf.pow(10.0, tf.div(amp_db, 10.0))).sqrt();
-      audio_reverse_stft = tf.mul(amp_db_rev, phase);
-      audio_reconstruct = tf.signal.inverse_stft(audio_reverse_stft, frame_length, hop_length_fft);
+      // audio_reverse_stft = tf.mul(amp_db_rev, phase);
+      phase = tf.stack([phase]);
+      console.log('phase shape ' + phase.shape);
+
+      // console.log('t_phase ' + t_phase.shape);
+      audio_reconstruct = inverse_stft(amp_db_rev, phase, frame_length, hop_length_fft);
       console.log('audio_reconstruct ' + audio_reconstruct.shape);
       return audio_reconstruct;
     }
@@ -99,18 +133,13 @@
     function matrix_spectrogram_to_audio(mag, phase, frame_length, hop_length_fft, ref_value) {
       nb_audio = mag.shape[0];
       var audio_reconstruct_arr = [];
-      phase_split = tf.split(phase, nb_audio, 0);
       for (var i = 0; i < nb_audio; i++) {
-        try {
-          audio_reconstruct = magnitude_db_and_phase_to_audio(frame_length, hop_length_fft, mag.slice([i], [1]), phase_split[i], ref_value);
-          console.log(audio_reconstruct.shape);
-          audio_reconstruct.print();
-          console.log('array_reconstruct ' + audio_reconstruct.shape);
-          audio_reconstruct_arr.push(audio_reconstruct);
-        } catch (error) {
-          console.error(error);
-          console.log("Error at audio " + i);
-        }
+        audio_reconstruct = magnitude_db_and_phase_to_audio(frame_length, hop_length_fft, mag.slice([i], [1]), phase[i], ref_value);
+        console.log(audio_reconstruct.shape);
+        audio_reconstruct.print();
+        console.log('array_reconstruct ' + audio_reconstruct.shape);
+        audio_reconstruct_arr.push(audio_reconstruct);
+
       }
       audio_reconstruct_stack = tf.stack(audio_reconstruct_arr);
       console.log('audio_reconstruct_stack ' + audio_reconstruct_stack.shape);
@@ -136,7 +165,13 @@
     async function prediction(data, dim_sqr_spec, frame_length, n_fft, hop_length_frame, hop_length_fft) {
       const model = await tf.loadLayersModel("/rnn/model.json");
       data = audio_to_audio_frame_stack(data, frame_length, hop_length_frame);
-      [amp_db, phase, ref_value] = audio_to_matrix_spectrogram(data, dim_sqr_spec, n_fft, hop_length_fft);
+      [amp, phase] = audio_to_matrix_spectrogram(data, dim_sqr_spec, n_fft, hop_length_fft);
+      amp_db = tf.stack(amp);
+      console.log('amp_db shape ' + amp_db.shape);
+      // console.log('amp_db ' + amp_db);
+      // console.log('phase ' + phase);
+      console.log('phase shape ' + phase.length);
+      console.log('phase[0] shape ' + phase[0].shape);
       X_in = scaled_in(amp_db);
       console.log('X_in ' + X_in.shape);
       X_in = X_in.reshape([X_in.shape[0], X_in.shape[1], X_in.shape[2], 1]);
@@ -147,10 +182,10 @@
       // console.log('split ' + inv_sca_X_pred.unstack(3)[0].shape);
       X_denoise = amp_db.sub(inv_sca_X_pred.unstack(3)[0]);
       console.log('X_denoise ' + X_denoise.shape);
-      audio_denoise_recons = matrix_spectrogram_to_audio(X_denoise, phase, frame_length, hop_length_fft, 1);
+      audio_denoise_recons = matrix_spectrogram_to_audio(X_denoise, phase, frame_length, hop_length_fft, tf.tensor1d([1]));
       console.log('audio_denoise_recons ' + audio_denoise_recons.shape);
       nb_samples = audio_denoise_recons.shape[0];
-      denoise_long = audio_denoise_recons.reshape([1, nb_samples * frame_length]) * 10;
+      denoise_long = audio_denoise_recons.reshape([1, nb_samples * frame_length]) ;
       console.log('denoise_long ' + denoise_long.shape);
       return denoise_long;
     }
