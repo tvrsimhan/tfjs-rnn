@@ -20,25 +20,30 @@ function inverse_stft(mag, phase, frame_length, hop_length_fft, n_fft) {
 	phase.print()
 
 	let stft_a = tf.mul(mag, phase)
+	let framedSignal = tf.signal.frame(stft_a, frame_length, hop_length_fft)
+	let windowedSignal = tf.mul(framedSignal, tf.signal.hannWindow(frame_length))
+
 	// pad_amount = (frame_length - hop_length_fft);
 	// data = tf.mirrorPad(data, [[Math.floor(pad_amount / 2) + 1], [0]], 'reflect');
 	console.log(data.shape)
 	console.log(stft_a.shape)
+	
 	// console.log('stft_a ' + stft_a);
-	stft_a.print()
+	windowedSignal.print()
 	// stft_a.reshape([stft_a.shape[1], stft_a.shape[2], stft_a.shape[0]]);
-	real_frames = stft_a.irfft()
+	real_frames = windowedSignal.irfft(n_fft)
 	console.log("real_frames " + real_frames.shape)
 	real_frames.print()
+	// /* *|CURSOR_MARCADOR|* */
 	real_frames = tf.squeeze(real_frames)
-	console.log("real_frames " + real_frames.shape)
-	real_frames = real_frames.reshape([
-		real_frames.shape[0] * real_frames.shape[1],
-	])
-	console.log("real_frames " + real_frames.shape)
-	// console.log(frame_length);
-	real_frames = real_frames.slice([0], frame_length)
-	console.log("real_frames " + real_frames.shape)
+	// console.log("real_frames " + real_frames.shape)
+	// real_frames = real_frames.reshape([
+	// 	real_frames.shape[0] * real_frames.shape[1],
+	// ])
+	// console.log("real_frames " + real_frames.shape)
+	// // console.log(frame_length);
+	// real_frames = real_frames.slice([0], frame_length)
+	// console.log("real_frames " + real_frames.shape)
 	// real_frames = real_frames.reshape([1, real_frames.shape[0]]);
 	// console.log('real_frames ' + real_frames.shape);
 	return real_frames
@@ -205,12 +210,12 @@ async function prediction(
 ) {
 	const model = await tf.loadLayersModel("/rnn/model.json")
 	data = audio_to_audio_frame_stack(data, frame_length, hop_length_frame)
-	;[amp, phase] = audio_to_matrix_spectrogram(
-		data,
-		dim_sqr_spec,
-		n_fft,
-		hop_length_fft
-	)
+		;[amp, phase] = audio_to_matrix_spectrogram(
+			data,
+			dim_sqr_spec,
+			n_fft,
+			hop_length_fft
+		)
 	amp_db = tf.stack(amp)
 	console.log("amp_db shape " + amp_db.shape)
 	// console.log('amp_db ' + amp_db);
@@ -250,8 +255,8 @@ async function loadDogSound(url) {
 	request.onload = async function () {
 		let context = new AudioContext({ sampleRate: sample_rate })
 		let audioData = request.response
-        console.log(request.response)
-		console.log("%c printing response", "color: red" )
+		console.log(request.response)
+		console.log("%c printing response", "color: red")
 		context.decodeAudioData(audioData, async (buffer) => {
 			console.log(buffer)
 			data = await tf.tensor(buffer.getChannelData(0))
@@ -268,8 +273,8 @@ async function loadDogSound(url) {
 				hop_length_fft
 			)
 
-            playDecodedSound(value, context)
-            
+			playDecodedSound(value, context)
+
 		})
 	}
 	request.send()
@@ -293,50 +298,50 @@ function playSound(arrybuffer) {
 	source.connect(context.destination) // connect the source to the context's destination (the speakers)
 	source.start()
 	/*const streamNode = context.createMediaStreamDestination();
-      source.connect(streamNode);
-      const audioElem = new Audio();
-      audioElem.controls = true;
-      document.body.appendChild(audioElem);
-      audioElem.srcObject = streamNode.stream;                          // play the source now
-      source.start();*/
+	  source.connect(streamNode);
+	  const audioElem = new Audio();
+	  audioElem.controls = true;
+	  document.body.appendChild(audioElem);
+	  audioElem.srcObject = streamNode.stream;                          // play the source now
+	  source.start();*/
 }
 
 
 function playDecodedSound(value, context) {
-    console.log("%c Printing value", "color: #fbc531")
-    console.log("value " + value)
+	console.log("%c Printing value", "color: #fbc531")
+	console.log("value " + value)
 
-    // the value is a tensor, so we need to convert it to an array to be able to play it
-    let value_arr = value.dataSync()
+	// the value is a tensor, so we need to convert it to an array to be able to play it
+	let value_arr = value.dataSync()
 
-    // create a new buffer to store the denoised audio
-    let denoisedBuffer = context.createBuffer(
-        1,
-        value_arr.length,
-        sample_rate
-    )
+	// create a new buffer to store the denoised audio
+	let denoisedBuffer = context.createBuffer(
+		1,
+		value_arr.length,
+		sample_rate
+	)
 
-    // copy the denoised audio to the new buffer
-    denoisedBuffer.copyToChannel(value_arr, 0)
+	// copy the denoised audio to the new buffer
+	denoisedBuffer.copyToChannel(value_arr, 0)
 
-    // create a new audio source to play the denoised audio
-    let denoisedSource = context.createBufferSource()
-    denoisedSource.buffer = denoisedBuffer
-    denoisedSource.connect(context.destination)
-    denoisedSource.start()
+	// create a new audio source to play the denoised audio
+	let denoisedSource = context.createBufferSource()
+	denoisedSource.buffer = denoisedBuffer
+	denoisedSource.connect(context.destination)
+	denoisedSource.start()
 
-    // download the denoised audio as mp3
-    let blob = new Blob([value_arr], { type: "audio/mp3" })
-    // ISSUE: THE CONVERTED AUDIO CANNOT BE PLAYED ON VLC
-    let url = URL.createObjectURL(blob)
-    let a = document.createElement("a")
-    a.style.display = "none"
-    a.href = url
-    a.download = "denoised.mp3"
-    a.click()
-    window.URL.revokeObjectURL(url)
+	// download the denoised audio as mp3
+	let blob = new Blob([value_arr], { type: "audio/mp3" })
+	// ISSUE: THE CONVERTED AUDIO CANNOT BE PLAYED ON VLC
+	let url = URL.createObjectURL(blob)
+	let a = document.createElement("a")
+	a.style.display = "none"
+	a.href = url
+	a.download = "denoised.mp3"
+	a.click()
+	window.URL.revokeObjectURL(url)
 
-    // print duration of the converted mp3 audio
-    console.log("%c Printing duration", "color: #4cd137")
-    console.log("duration " + denoisedBuffer.duration)
+	// print duration of the converted mp3 audio
+	console.log("%c Printing duration", "color: #4cd137")
+	console.log("duration " + denoisedBuffer.duration)
 }
