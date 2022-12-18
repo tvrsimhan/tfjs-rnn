@@ -13,9 +13,10 @@
             const micropip = pyodide.pyimport("micropip");
             await micropip.install(['typing'])
             // await micropip.install('https://www.piwheels.org/simple/librosa/librosa-0.8.1-py3-none-any.whl', keep_going = true);
-            console.log(pyodide.runPython("from scipy import signal; print(signal.get_window('triang', 7))"));
-            // pyodide.runPython(await (await fetch("https://some_url/.../code.py")).text());
-            // console.log(await (await fetch("https://raw.githubusercontent.com/TejeshwiniRS/webrtc/main/index.html")).text());
+            // console.log(pyodide.runPython("from scipy import signal; print(signal.get_window('triang', 7))"));
+            pyodide.runPython(await (await fetch("https://raw.githubusercontent.com/tvrsimhan/tfjs-rnn/pyodideAttempt/customLibrosa.py")).text());
+            pyodide.runPython("print(stft)");
+            // console.log(await (await fetch("https://raw.githubusercontent.com/tvrsimhan/tfjs-rnn/pyodideAttempt/customLibrosa.py")).text());
         }
         main();
     </script>

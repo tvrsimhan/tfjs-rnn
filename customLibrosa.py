@@ -239,7 +239,7 @@ def __window_ss_fill(x, win_sq, n_frames, hop_length):
 
 def window_sumsquare(
     *,
-    window: _WindowSpec,
+    window,
     n_frames: int,
     hop_length: int = 512,
     win_length: Optional[int] = None,
