@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.21.3/full/pyodide.js"></script>
+</head>
+
+<body>
+    <script type="text/javascript">
+        async function main() {
+            let pyodide = await loadPyodide();
+            await pyodide.loadPackage(['numpy', 'micropip', 'scipy']);
+            const micropip = pyodide.pyimport("micropip");
+            await micropip.install(['typing'])
+            // await micropip.install('https://www.piwheels.org/simple/librosa/librosa-0.8.1-py3-none-any.whl', keep_going = true);
+            console.log(pyodide.runPython("from scipy import signal; print(signal.get_window('triang', 7))"));
+            // pyodide.runPython(await (await fetch("https://some_url/.../code.py")).text());
+            // console.log(await (await fetch("https://raw.githubusercontent.com/TejeshwiniRS/webrtc/main/index.html")).text());
+        }
+        main();
+    </script>
+</body>
+
+</html>

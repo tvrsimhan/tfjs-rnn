@@ -13,7 +13,6 @@ function audio_to_audio_frame_stack(data, frame_length, hop_length_frame) {
 	console.log("audio_frame_stack " + audio_frame_stack.shape)
 	return audio_frame_stack
 }
-
 function inverse_stft(mag, phase, frame_length, hop_length_fft, n_fft) {
 	console.log("mag " + mag)
 	console.log("phase " + phase)
@@ -27,7 +26,7 @@ function inverse_stft(mag, phase, frame_length, hop_length_fft, n_fft) {
 	// data = tf.mirrorPad(data, [[Math.floor(pad_amount / 2) + 1], [0]], 'reflect');
 	console.log(data.shape)
 	console.log(stft_a.shape)
-	
+
 	// console.log('stft_a ' + stft_a);
 	windowedSignal.print()
 	// stft_a.reshape([stft_a.shape[1], stft_a.shape[2], stft_a.shape[0]]);
